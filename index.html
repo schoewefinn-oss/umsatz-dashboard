@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Umsatz Dashboard</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:'Segoe UI',sans-serif;background:radial-gradient(circle at top,#020617,#000);color:#e5e7eb;}
+/* LOGIN SCREEN */
+#loginScreen{display:flex;align-items:center;justify-content:center;height:100vh;background:#020617;}
+#loginBox{ text-align:center;background:#111;padding:40px;border-radius:20px;box-shadow:0 0 40px rgba(56,189,248,.4);position:relative;}
+#loginBox input{padding:10px;width:200px;margin:10px;border-radius:8px;border:none;}
+#loginBox button{padding:10px 20px;border-radius:8px;border:none;background:#38bdf8;color:#000;cursor:pointer;}
+#errorMsg{color:red;margin-top:10px;display:none;}
+#loginSuccess{position:absolute;top:-20px;right:-20px;width:50px;height:50px;background:#22c55e;border-radius:50%;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(0);transition:0.5s;}
+#loginSuccess.show{opacity:1;transform:scale(1);}
+#loginSuccess:after{content:'✔';color:#fff;font-size:24px;font-weight:bold;}
+/* DASHBOARD */
+#dashboard{display:none;}
+header{text-align:center;padding:50px 20px;position:relative}
+header h1{font-size:3.2rem;color:#38bdf8;text-shadow:0 0 30px rgba(56,189,248,.6);}
+#search{margin-top:25px;width:100%;max-width:460px;padding:16px;border-radius:16px;border:none;background:#020617;color:white;outline:none;box-shadow:0 0 30px rgba(56,189,248,.35);display:block;margin-left:auto;margin-right:auto;}
+.profileTopRight{position:absolute;top:20px;right:20px;background:rgba(2,6,23,0.9);padding:10px 20px;border-radius:15px;display:flex;align-items:center;gap:10px;box-shadow:0 0 30px rgba(56,189,248,.5);}
+.profileTopRight img{width:40px;height:40px;border-radius:8px;image-rendering:pixelated;}
+.roleLabel{font-weight:bold;padding:2px 6px;border-radius:5px;font-size:0.9rem;}
+.roleInhaber{background:#991b1b;color:#fff;} /* dunkles Rot */
+.roleHelfer{background:#eab308;color:#000;} /* Gelb */
+
+/* CONTAINER & CARDS */
+.container{max-width:1300px;margin:auto;padding:20px}
+.card{background:rgba(2,6,23,.9);border-radius:25px;padding:25px;margin-bottom:35px;box-shadow:0 0 50px rgba(0,0,0,.8);animation:fadeUp .8s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1}}
+.top3{display:flex;justify-content:center;gap:30px;flex-wrap:wrap}
+.top-card{width:260px;text-align:center;padding:25px;border-radius:25px;transition:.4s}
+.top-card:hover{transform:scale(1.08)}
+.top-card img{width:110px;height:110px;image-rendering:pixelated}
+.gold{box-shadow:0 0 40px rgba(250,204,21,.7)}
+.silver{box-shadow:0 0 30px rgba(203,213,225,.6)}
+.bronze{box-shadow:0 0 30px rgba(251,146,60,.6)}
+.players{max-height:520px;overflow-y:auto}
+.player{display:flex;align-items:center;gap:16px;padding:14px;border-bottom:1px solid #1e293b;transition:.3s;cursor:pointer}
+.player:hover{background:rgba(56,189,248,.1);transform:scale(1.015)}
+.player img{width:44px;height:44px;border-radius:8px;image-rendering:pixelated}
+.hgw{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:25px}
+.hgw-card{padding:25px;border-radius:25px;box-shadow:0 0 35px rgba(250,204,21,.3);transition:.4s}
+.hgw-card:hover{transform:translateY(-8px) scale(1.03)}
+.last{display:flex;align-items:center;gap:10px;margin-top:10px}
+.last img{width:32px;height:32px;border-radius:6px;image-rendering:pixelated}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;}
+.modal-content{background:#020617;padding:30px;border-radius:25px;text-align:center;box-shadow:0 0 40px rgba(56,189,248,.4);animation:fadeUp .4s ease}
+.modal-content img{width:128px;height:128px;image-rendering:pixelated}
+.close{cursor:pointer;color:#38bdf8;margin-top:15px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div id="loginBox">
+    <div id="loginSuccess"></div>
+    <h2 style="color:#38bdf8;">🔐 Login</h2>
+    <input id="username" placeholder="Benutzername"><br>
+    <input id="password" type="password" placeholder="Passwort"><br>
+    <button id="loginBtn">Login</button>
+    <p id="errorMsg">Falscher Benutzername oder Passwort</p>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+<header>
+  <h1>📊 Umsatz Dashboard</h1>
+  <input id="search" placeholder="🔍 Spieler suchen...">
+  <div class="profileTopRight" id="profileTop"></div>
+</header>
+<div class="container">
+<div class="card">
+  <h2>🏆 Top 3 Spieler</h2>
+  <div class="top3" id="top3"></div>
+</div>
+<div class="card">
+  <h2>👥 Alle Spieler</h2>
+  <div class="players" id="players"></div>
+</div>
+<div class="card">
+  <h2>🎰 HGW – Hauptgewinne</h2>
+  <div class="hgw" id="hgw"></div>
+</div>
+</div>
+</div>
+
+<!-- PROFILE MODAL -->
+<div class="modal" id="modal">
+  <div class="modal-content" id="modalContent"></div>
+</div>
+
+<script>
+// LOGIN USERS
+const users = [
+  {username:"Lafre", password:"ItalyGameCB1", role:"Inhaber"},
+  {username:"Lattenrost1234", password:"ItalyGameCB1", role:"Inhaber"},
+  {username:"JasonNewAcc", password:"JasonStinkt", role:"Helfer"}
+];
+
+const loginScreen = document.getElementById("loginScreen");
+const dashboard = document.getElementById("dashboard");
+const errorMsg = document.getElementById("errorMsg");
+const loginSuccess = document.getElementById("loginSuccess");
+const profileTop = document.getElementById("profileTop");
+
+document.getElementById("loginBtn").addEventListener("click",()=>{
+  const user = document.getElementById("username").value;
+  const pass = document.getElementById("password").value;
+  const valid = users.find(u=>u.username===user && u.password===pass);
+  if(valid){
+    loginSuccess.classList.add("show");
+    setTimeout(()=>{
+      loginScreen.style.display="none";
+      dashboard.style.display="block";
+      loginSuccess.classList.remove("show");
+      renderProfileTop(valid);
+    },800);
+  } else { errorMsg.style.display="block"; }
+});
+
+// RAW DATA
+const rawWagers = [
+["JasonNewAcc",26600023],["CrafterXD1",6100010],["Premium_man_",6900007],
+["1Unbekannter",7300001],["Wintersled",3200005],["zNight649",3700005],
+["Lafre",1000001],["Lattenrost1234",400000],["HansBratiGeming",1500003],
+["117p",200000],["ClapByMarlon",1100001],["JoneBone09",700001],
+["7Brr",200000],["ItsZynex",2100004],["hayzce",1000002]
+];
+// MERGE DUPLICATES
+const wagerMap = {};
+rawWagers.forEach(([name,amount])=>{wagerMap[name]=(wagerMap[name]||0)+amount;});
+const wagers = Object.entries(wagerMap).map(([playername,wager])=>({playername,wager}))
+.sort((a,b)=>b.wager-a.wager);
+
+// HELPER FUNCTION FOR ROLE LABEL
+function getRoleLabel(username){
+  const user = users.find(u=>u.username===username);
+  if(!user || !user.role) return '';
+  if(user.role==='Inhaber') return `<span class="roleLabel roleInhaber">Inhaber</span>`;
+  if(user.role==='Helfer') return `<span class="roleLabel roleHelfer">Helfer</span>`;
+  return '';
+}
+
+// PROFILE TOP RIGHT
+function renderProfileTop(user){
+  const username = user.username;
+  const userData = wagers.find(p=>p.playername===username);
+  if(!userData) return;
+  const rank = wagers.findIndex(p=>p.playername===username)+1;
+  profileTop.innerHTML = `
+    <img src="https://minotar.net/avatar/${username}/64">
+    <div style="text-align:right;">
+      <strong>Angemeldet als ${username}</strong><br>
+      ${getRoleLabel(username)}<br>
+      Platz: #${rank}<br>
+      💰 Umsatz: ${userData.wager.toLocaleString("de-DE")} $
+    </div>
+  `;
+}
+
+
+// TOP 3
+["gold","silver","bronze"].forEach((cls,i)=>{
+  const p=wagers[i];
+  top3.innerHTML+=`
+  <div class="top-card ${cls}">
+    <img src="https://minotar.net/avatar/${p.playername}/128">
+    <h3>#${i+1} ${p.playername} ${getRoleLabel(p.playername)}</h3>
+    💰 ${p.wager.toLocaleString("de-DE")} $
+  </div>`;
+});
+
+// PROFILE MODAL
+const modal = document.getElementById("modal");
+const modalContent = document.getElementById("modalContent");
+function openProfile(p,i){
+  modal.style.display="flex";
+  modalContent.innerHTML=`
+    <img src="https://minotar.net/avatar/${p.playername}/128">
+    <h2>${p.playername} ${getRoleLabel(p.playername)}</h2>
+    <p>🏆 Rang: #${i+1}</p>
+    <p>💰 Umsatz: ${p.wager.toLocaleString("de-DE")} $</p>
+    <div class="close" onclick="modal.style.display='none'">Schließen</div>
+  `;
+}
+
+// ALL PLAYERS
+function renderPlayers(filter=""){
+  players.innerHTML="";
+  wagers.filter(p=>p.playername.toLowerCase().includes(filter))
+  .forEach((p,i)=>{
+    players.innerHTML+=`
+    <div class="player" onclick='openProfile(${JSON.stringify(p)},${i})'>
+      <img src="https://minotar.net/avatar/${p.playername}/64">
+      <div><strong>${p.playername} ${getRoleLabel(p.playername)}</strong><br>💰 ${p.wager.toLocaleString("de-DE")} $</div>
+    </div>`;
+  });
+}
+renderPlayers();
+search.oninput=e=>renderPlayers(e.target.value.toLowerCase());
+
+// HGW
+const jackpots=[
+  {price:3000000,times:15,last:"JasonNewAcc"},
+  {price:500000,times:48,last:"ImVirox"}
+];
+jackpots.forEach(j=>{
+  hgw.innerHTML+=`
+  <div class="hgw-card">
+    <h3>💎 Gewinn ${j.price.toLocaleString("de-DE")} $</h3>
+    <p>🎟️ ${j.times}x gezogen</p>
+    <p>💰 Gesamt ${(j.price*j.times).toLocaleString("de-DE")} $</p>
+    <div class="last">
+      <img src="https://minotar.net/avatar/${j.last}/32">
+      Letzter Gewinner: <strong>${j.last} ${getRoleLabel(j.last)}</strong>
+    </div>
+  </div>`;
+});
+</script>
+</body>
+</html>
