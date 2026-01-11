@@ -278,12 +278,10 @@ function updateProfitDisplay2(){
   const profit = totalIncome - totalExpense;
   profitDisplay2.textContent = profit.toLocaleString("de-DE") + " $";
   profitDisplay2.style.color = profit >= 0 ? "#22c55e" : "#ef4444";
-  // speichere die Werte im LocalStorage
   localStorage.setItem('totalIncome', totalIncome);
   localStorage.setItem('totalExpense', totalExpense);
 }
 
-// Klick: addiere Werte
 addBtn2.addEventListener('click',()=>{
   const inc = parseFloat(incomeInput2.value) || 0;
   const exp = parseFloat(expenseInput2.value) || 0;
@@ -294,7 +292,6 @@ addBtn2.addEventListener('click',()=>{
   updateProfitDisplay2();
 });
 
-// Initial laden
 updateProfitDisplay2();
 </script>
 </body>
