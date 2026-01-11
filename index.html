@@ -143,7 +143,7 @@ header h1{font-size:3.2rem;color:#38bdf8;text-shadow:0 0 30px rgba(56,189,248,.6
 const users = [
   {username:"Lafre", password:"ItalyGameCB1", role:"Inhaber"},
   {username:"Lattenrost1234", password:"ItalyGameCB1", role:"Inhaber"},
-  {username:"JasonNewAcc", password:"JasonStinkt", role:"Helfer"}
+  {username:"JasonNewAcc", password:"dummy", role:"Helfer"}
 ];
 
 const loginScreen = document.getElementById("loginScreen");
@@ -176,13 +176,12 @@ const rawWagers = [
 ["117p",200000],["ClapByMarlon",1100001],["JoneBone09",700001],
 ["7Brr",200000],["ItsZynex",2100004],["hayzce",1000002]
 ];
-// MERGE DUPLICATES
 const wagerMap = {};
 rawWagers.forEach(([name,amount])=>{wagerMap[name]=(wagerMap[name]||0)+amount;});
 const wagers = Object.entries(wagerMap).map(([playername,wager])=>({playername,wager}))
 .sort((a,b)=>b.wager-a.wager);
 
-// HELPER FUNCTION FOR ROLE LABEL
+// ROLE LABEL
 function getRoleLabel(username){
   const user = users.find(u=>u.username===username);
   if(!user || !user.role) return '';
@@ -266,33 +265,37 @@ jackpots.forEach(j=>{
   </div>`;
 });
 
-// OWNER PANEL LOGIC (kumulativ)
-let totalIncome = 0;
-let totalExpense = 0;
+// OWNER PANEL LOGIC (kumulativ + LocalStorage)
+let totalIncome = parseFloat(localStorage.getItem('totalIncome')) || 0;
+let totalExpense = parseFloat(localStorage.getItem('totalExpense')) || 0;
 
 const incomeInput2 = document.getElementById('income');
 const expenseInput2 = document.getElementById('expense');
 const profitDisplay2 = document.getElementById('profit');
-const addBtn = document.getElementById('addBtn');
+const addBtn2 = document.getElementById('addBtn');
 
-function updateProfitDisplay(){
+function updateProfitDisplay2(){
   const profit = totalIncome - totalExpense;
   profitDisplay2.textContent = profit.toLocaleString("de-DE") + " $";
   profitDisplay2.style.color = profit >= 0 ? "#22c55e" : "#ef4444";
+  // speichere die Werte im LocalStorage
+  localStorage.setItem('totalIncome', totalIncome);
+  localStorage.setItem('totalExpense', totalExpense);
 }
 
-addBtn.addEventListener('click',()=>{
-  const inc = parseFloat(incomeInput2.value)||0;
-  const exp = parseFloat(expenseInput2.value)||0;
+// Klick: addiere Werte
+addBtn2.addEventListener('click',()=>{
+  const inc = parseFloat(incomeInput2.value) || 0;
+  const exp = parseFloat(expenseInput2.value) || 0;
   totalIncome += inc;
   totalExpense += exp;
   incomeInput2.value = 0;
   expenseInput2.value = 0;
-  updateProfitDisplay();
+  updateProfitDisplay2();
 });
 
-updateProfitDisplay();
-
+// Initial laden
+updateProfitDisplay2();
 </script>
 </body>
 </html>
