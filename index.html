@@ -6,6 +6,7 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:'Segoe UI',sans-serif;background:radial-gradient(circle at top,#020617,#000);color:#e5e7eb;}
+
 /* LOGIN SCREEN */
 #loginScreen{display:flex;align-items:center;justify-content:center;height:100vh;background:#020617;}
 #loginBox{ text-align:center;background:#111;padding:40px;border-radius:20px;box-shadow:0 0 40px rgba(56,189,248,.4);position:relative;}
@@ -15,6 +16,7 @@ body{margin:0;font-family:'Segoe UI',sans-serif;background:radial-gradient(circl
 #loginSuccess{position:absolute;top:-20px;right:-20px;width:50px;height:50px;background:#22c55e;border-radius:50%;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(0);transition:0.5s;}
 #loginSuccess.show{opacity:1;transform:scale(1);}
 #loginSuccess:after{content:'✔';color:#fff;font-size:24px;font-weight:bold;}
+
 /* DASHBOARD */
 #dashboard{display:none;}
 header{text-align:center;padding:50px 20px;position:relative}
@@ -23,8 +25,35 @@ header h1{font-size:3.2rem;color:#38bdf8;text-shadow:0 0 30px rgba(56,189,248,.6
 .profileTopRight{position:absolute;top:20px;right:20px;background:rgba(2,6,23,0.9);padding:10px 20px;border-radius:15px;display:flex;align-items:center;gap:10px;box-shadow:0 0 30px rgba(56,189,248,.5);}
 .profileTopRight img{width:40px;height:40px;border-radius:8px;image-rendering:pixelated;}
 .roleLabel{font-weight:bold;padding:2px 6px;border-radius:5px;font-size:0.9rem;}
-.roleInhaber{background:#991b1b;color:#fff;} /* dunkles Rot */
-.roleHelfer{background:#eab308;color:#000;} /* Gelb */
+.roleInhaber{background:#991b1b;color:#fff;} /* dunkelrot */
+.roleHelfer{background:#eab308;color:#000;} /* gelb */
+
+/* OWNER PANEL */
+.ownerPanel{
+  position:fixed;
+  top:20px;
+  left:20px;
+  background:rgba(2,6,23,0.95);
+  padding:20px;
+  border-radius:15px;
+  box-shadow:0 0 30px rgba(56,189,248,.5);
+  text-align:left;
+  z-index:9999;
+}
+.ownerPanel img{width:64px;height:64px;border-radius:8px;image-rendering:pixelated;display:block;margin-bottom:10px;}
+.ownerPanel input{
+  width:140px;border-radius:6px;border:none;padding:6px;margin:4px 0;background:#111;color:white;font-size:1rem;
+}
+.ownerPanel input:focus{
+  outline:2px solid #38bdf8;
+  animation: pulse 0.5s;
+}
+@keyframes pulse{
+  0%{box-shadow:0 0 0px #38bdf8;}
+  50%{box-shadow:0 0 10px #38bdf8;}
+  100%{box-shadow:0 0 0px #38bdf8;}
+}
+#profit{display:inline-block;min-width:60px;font-size:1.1rem;}
 
 /* CONTAINER & CARDS */
 .container{max-width:1300px;margin:auto;padding:20px}
@@ -68,11 +97,26 @@ header h1{font-size:3.2rem;color:#38bdf8;text-shadow:0 0 30px rgba(56,189,248,.6
 
 <!-- DASHBOARD -->
 <div id="dashboard">
+
+<!-- Owner Panel oben links -->
+<div class="ownerPanel" id="ownerPanel">
+  <img src="https://minotar.net/avatar/ItalyGameCB1/64" alt="Bot Skin">
+  <div style="margin-top:10px;">
+    <label>💸 Eingenommen: </label>
+    <input type="number" id="income" value="0" min="0">
+    <label>💰 Ausgegeben: </label>
+    <input type="number" id="expense" value="0" min="0"><br>
+    <button id="addBtn" style="margin-top:5px;padding:5px 12px;border-radius:5px;border:none;background:#38bdf8;color:#000;cursor:pointer;">Eintragen</button><br>
+    <strong>Verdient: <span id="profit">0 $</span></strong>
+  </div>
+</div>
+
 <header>
   <h1>📊 Umsatz Dashboard</h1>
   <input id="search" placeholder="🔍 Spieler suchen...">
   <div class="profileTopRight" id="profileTop"></div>
 </header>
+
 <div class="container">
 <div class="card">
   <h2>🏆 Top 3 Spieler</h2>
@@ -119,6 +163,7 @@ document.getElementById("loginBtn").addEventListener("click",()=>{
       dashboard.style.display="block";
       loginSuccess.classList.remove("show");
       renderProfileTop(valid);
+      renderPlayers();
     },800);
   } else { errorMsg.style.display="block"; }
 });
@@ -163,10 +208,10 @@ function renderProfileTop(user){
   `;
 }
 
-
 // TOP 3
 ["gold","silver","bronze"].forEach((cls,i)=>{
   const p=wagers[i];
+  if(!p) return;
   top3.innerHTML+=`
   <div class="top-card ${cls}">
     <img src="https://minotar.net/avatar/${p.playername}/128">
@@ -201,7 +246,6 @@ function renderPlayers(filter=""){
     </div>`;
   });
 }
-renderPlayers();
 search.oninput=e=>renderPlayers(e.target.value.toLowerCase());
 
 // HGW
@@ -221,6 +265,34 @@ jackpots.forEach(j=>{
     </div>
   </div>`;
 });
+
+// OWNER PANEL LOGIC (kumulativ)
+let totalIncome = 0;
+let totalExpense = 0;
+
+const incomeInput2 = document.getElementById('income');
+const expenseInput2 = document.getElementById('expense');
+const profitDisplay2 = document.getElementById('profit');
+const addBtn = document.getElementById('addBtn');
+
+function updateProfitDisplay(){
+  const profit = totalIncome - totalExpense;
+  profitDisplay2.textContent = profit.toLocaleString("de-DE") + " $";
+  profitDisplay2.style.color = profit >= 0 ? "#22c55e" : "#ef4444";
+}
+
+addBtn.addEventListener('click',()=>{
+  const inc = parseFloat(incomeInput2.value)||0;
+  const exp = parseFloat(expenseInput2.value)||0;
+  totalIncome += inc;
+  totalExpense += exp;
+  incomeInput2.value = 0;
+  expenseInput2.value = 0;
+  updateProfitDisplay();
+});
+
+updateProfitDisplay();
+
 </script>
 </body>
 </html>
